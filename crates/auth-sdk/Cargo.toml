@@ -1,0 +1,10 @@
+[package]
+name = "club-auth-sdk"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+
+[dev-dependencies]

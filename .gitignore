@@ -1,0 +1,6 @@
+target/
+*.pem
+*.p8
+.DS_Store
+*.log
+coverage/
