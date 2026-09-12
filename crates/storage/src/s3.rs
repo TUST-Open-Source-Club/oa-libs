@@ -8,7 +8,7 @@ use http::Method;
 use object_store::aws::AmazonS3Builder;
 use object_store::path::Path as ObjectPath;
 use object_store::signer::Signer;
-use object_store::{ObjectStore, ObjectStoreExt, PutPayload};
+use object_store::{ObjectStoreExt, PutPayload};
 
 use crate::traits::{StorageBackend, StorageError};
 
