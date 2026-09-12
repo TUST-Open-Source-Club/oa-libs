@@ -14,8 +14,7 @@ pub const USERNAME_MAX_LEN: usize = 32;
 /// 简单邮箱校验：单 `@`、本地与域名均非空、域名含点且无空白字符。
 pub fn is_valid_email(email: &str) -> bool {
     let email = email.trim();
-    if email.is_empty() || email.len() > EMAIL_MAX_LEN || email.chars().any(char::is_whitespace)
-    {
+    if email.is_empty() || email.len() > EMAIL_MAX_LEN || email.chars().any(char::is_whitespace) {
         return false;
     }
     let mut parts = email.split('@');
@@ -28,9 +27,9 @@ pub fn is_valid_email(email: &str) -> bool {
     if !domain.contains('.') || domain.starts_with('.') || domain.ends_with('.') {
         return false;
     }
-    domain
-        .split('.')
-        .all(|label| !label.is_empty() && label.chars().all(|c| c.is_ascii_alphanumeric() || c == '-'))
+    domain.split('.').all(|label| {
+        !label.is_empty() && label.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')
+    })
 }
 
 /// 归一化邮箱：去除首尾空白并转小写（存储前统一使用）。
@@ -47,9 +46,12 @@ pub fn email_domain_allowed(email: &str, allowed_domains: &[String]) -> bool {
     let Some((_, domain)) = normalized.split_once('@') else {
         return false;
     };
-    allowed_domains
-        .iter()
-        .any(|allowed| allowed.trim().trim_start_matches('@').eq_ignore_ascii_case(domain))
+    allowed_domains.iter().any(|allowed| {
+        allowed
+            .trim()
+            .trim_start_matches('@')
+            .eq_ignore_ascii_case(domain)
+    })
 }
 
 /// 密码策略：长度 8 ~ 128，至少包含一个字母与一个数字。
@@ -136,12 +138,18 @@ mod tests {
     #[test]
     fn password_policy() {
         assert!(validate_password("abcd1234").is_ok());
-        assert_eq!(validate_password("short1").unwrap_err(), "password.too_short");
+        assert_eq!(
+            validate_password("short1").unwrap_err(),
+            "password.too_short"
+        );
         assert_eq!(
             validate_password("abcdefgh").unwrap_err(),
             "password.missing_digit"
         );
-        assert_eq!(validate_password("12345678").unwrap_err(), "password.missing_letter");
+        assert_eq!(
+            validate_password("12345678").unwrap_err(),
+            "password.missing_letter"
+        );
         let long = "a1".repeat(100);
         assert_eq!(validate_password(&long).unwrap_err(), "password.too_long");
     }

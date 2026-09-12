@@ -126,7 +126,8 @@ mod tests {
     fn sign_and_verify_roundtrip() {
         let claims = sample_claims(3600);
         let token = sign(&claims);
-        let decoded = decode_access_token(&token, &decoding_key(), "https://oa.test").expect("verify");
+        let decoded =
+            decode_access_token(&token, &decoding_key(), "https://oa.test").expect("verify");
         assert_eq!(decoded, claims);
 
         let header = jsonwebtoken::decode_header(&token).expect("header");
@@ -146,8 +147,7 @@ mod tests {
     #[test]
     fn rejects_wrong_issuer() {
         let token = sign(&sample_claims(3600));
-        let err =
-            decode_access_token(&token, &decoding_key(), "https://evil.test").unwrap_err();
+        let err = decode_access_token(&token, &decoding_key(), "https://evil.test").unwrap_err();
         assert!(matches!(err, JwtError::Invalid(_)));
     }
 

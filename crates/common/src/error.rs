@@ -178,17 +178,11 @@ impl AppError {
             AppError::Forbidden { detail, .. } => ("Forbidden", detail.clone(), None),
             AppError::NotFound { detail, .. } => ("Not Found", detail.clone(), None),
             AppError::Conflict { detail, .. } => ("Conflict", detail.clone(), None),
-            AppError::TooManyRequests { detail, .. } => {
-                ("Too Many Requests", detail.clone(), None)
-            }
+            AppError::TooManyRequests { detail, .. } => ("Too Many Requests", detail.clone(), None),
             AppError::Unprocessable { detail, errors, .. } => {
                 ("Unprocessable Entity", detail.clone(), Some(errors.clone()))
             }
-            AppError::Internal(_) => (
-                "Internal Server Error",
-                "服务器内部错误".to_string(),
-                None,
-            ),
+            AppError::Internal(_) => ("Internal Server Error", "服务器内部错误".to_string(), None),
         };
 
         ProblemDetails {
@@ -264,7 +258,10 @@ mod tests {
         let problem = err.problem();
         assert_eq!(problem.status, status.as_u16());
         assert_eq!(problem.code, code);
-        assert_eq!(problem.type_uri, format!("https://club-oa.local/errors/{code}"));
+        assert_eq!(
+            problem.type_uri,
+            format!("https://club-oa.local/errors/{code}")
+        );
     }
 
     #[test]
@@ -338,7 +335,10 @@ mod tests {
     fn serializes_to_problem_details_json() {
         let err = AppError::not_found("AUTH_USER_NOT_FOUND", "用户不存在");
         let value = serde_json::to_value(err.problem()).expect("serialize");
-        assert_eq!(value["type"], "https://club-oa.local/errors/AUTH_USER_NOT_FOUND");
+        assert_eq!(
+            value["type"],
+            "https://club-oa.local/errors/AUTH_USER_NOT_FOUND"
+        );
         assert_eq!(value["status"], 404);
         assert_eq!(value["code"], "AUTH_USER_NOT_FOUND");
         assert_eq!(value["detail"], "用户不存在");

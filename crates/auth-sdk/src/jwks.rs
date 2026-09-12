@@ -8,7 +8,8 @@ use crate::jwt::JwtError;
 
 /// 从 RSA 公钥 PEM 构造验签 key。
 pub fn decoding_key_from_rsa_pem(public_pem: &[u8]) -> Result<DecodingKey, JwtError> {
-    DecodingKey::from_rsa_pem(public_pem).map_err(|e| JwtError::Invalid(format!("invalid pem: {e}")))
+    DecodingKey::from_rsa_pem(public_pem)
+        .map_err(|e| JwtError::Invalid(format!("invalid pem: {e}")))
 }
 
 /// 单个 RSA 公钥 JWK。
