@@ -12,7 +12,17 @@ bytes = "1.12.1"
 chrono = "0.4.45"
 hex = "0.4.3"
 hmac = "0.13.0"
+http = { version = "1.5.0", optional = true }
+object_store = { version = "0.14.1", features = ["aws"], optional = true }
 sha2 = "0.11.0"
 thiserror = "2.0.20"
 tokio = { version = "1.53.1", features = ["fs", "io-util", "macros", "rt-multi-thread"] }
 tracing = "0.1.44"
+
+[features]
+s3 = ["dep:object_store", "dep:http"]
+http = ["dep:http"]
+
+[dev-dependencies]
+reqwest = { version = "0.13.5", default-features = false, features = ["json", "rustls"] }
+uuid = { version = "1.26.1", features = ["v7"] }

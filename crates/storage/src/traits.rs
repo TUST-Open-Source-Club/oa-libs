@@ -35,6 +35,16 @@ pub trait StorageBackend: Send + Sync {
     /// 对象是否存在。
     async fn exists(&self, key: &str) -> Result<bool, StorageError>;
 
+    /// 生成预签名下载 URL；仅 S3 后端支持，本地后端返回 `None`。
+    async fn presign_get(
+        &self,
+        key: &str,
+        expires_seconds: u64,
+    ) -> Result<Option<String>, StorageError> {
+        let _ = (key, expires_seconds);
+        Ok(None)
+    }
+
     /// 后端类型标识：`local` / `s3`。
     fn driver(&self) -> &'static str;
 }

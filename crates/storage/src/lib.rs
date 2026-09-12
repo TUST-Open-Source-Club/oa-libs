@@ -7,10 +7,13 @@
 
 /// 本地磁盘后端。
 pub mod local;
+/// S3 兼容后端（`s3` feature）。
+#[cfg(feature = "s3")]
+pub mod s3;
 /// 后端接口与错误。
 pub mod traits;
-// S3 兼容后端（object_store）将在 drive 接入时以 `s3` feature 落地，
-// 并通过 MinIO 容器做集成测试（见 docs/architecture.md 存储章节）。
 
 pub use local::LocalBackend;
+#[cfg(feature = "s3")]
+pub use s3::S3Backend;
 pub use traits::{StorageBackend, StorageError};
