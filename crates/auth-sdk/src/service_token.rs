@@ -8,16 +8,21 @@ type HmacSha256 = Hmac<Sha256>;
 /// 服务间调用令牌的默认时间窗口（秒）。
 pub const DEFAULT_LEEWAY_SECONDS: i64 = 60;
 
+/// 服务令牌校验错误。
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum ServiceTokenError {
+    /// 签名不匹配（密钥不符或消息被篡改）。
     #[error("invalid signature")]
     InvalidSignature,
+    /// 时间戳超出允许窗口（防重放失败）。
     #[error("timestamp out of allowed window")]
     Expired,
+    /// 签名不是合法 base64。
     #[error("malformed token")]
     Malformed,
 }
 
+/// 计算请求体的 SHA-256 十六进制摘要（绑定 body 防篡改）。
 fn body_digest_hex(body: &[u8]) -> String {
     let digest = Sha256::digest(body);
     let mut out = String::with_capacity(digest.len() * 2);
@@ -27,10 +32,12 @@ fn body_digest_hex(body: &[u8]) -> String {
     out
 }
 
+/// 组装待签名消息：`服务名\n时间戳\nbody摘要`。
 fn candidate_message(service: &str, timestamp: i64, body: &[u8]) -> String {
     format!("{service}\n{timestamp}\n{}", body_digest_hex(body))
 }
 
+/// 构建 HMAC-SHA256 计算器。
 fn mac_for(secret: &[u8], message: &str) -> HmacSha256 {
     let mut mac = HmacSha256::new_from_slice(secret).expect("HMAC accepts keys of any size");
     mac.update(message.as_bytes());

@@ -6,20 +6,33 @@ use sha2::{Digest, Sha256};
 
 use crate::jwt::JwtError;
 
+/// 从 RSA 公钥 PEM 构造验签 key。
+pub fn decoding_key_from_rsa_pem(public_pem: &[u8]) -> Result<DecodingKey, JwtError> {
+    DecodingKey::from_rsa_pem(public_pem).map_err(|e| JwtError::Invalid(format!("invalid pem: {e}")))
+}
+
 /// 单个 RSA 公钥 JWK。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Jwk {
+    /// 密钥类型（固定 `RSA`）。
     pub kty: String,
+    /// 密钥 ID（与 JWT 头部 kid 对应）。
     pub kid: String,
+    /// 用途（固定 `sig`）。
     #[serde(rename = "use")]
     pub use_: String,
+    /// 算法（固定 `RS256`）。
     pub alg: String,
+    /// 模数（base64url，无填充）。
     pub n: String,
+    /// 指数（base64url，无填充）。
     pub e: String,
 }
 
+/// JWKS 响应（公钥集合）。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Jwks {
+    /// 公钥列表。
     pub keys: Vec<Jwk>,
 }
 
@@ -41,6 +54,7 @@ pub fn jwk_from_rsa_public_components(kid: &str, modulus: &[u8], exponent: &[u8]
     }
 }
 
+/// 由单个 JWK 构造验签 key（仅支持 RSA）。
 pub fn decoding_key_from_jwk(jwk: &Jwk) -> Result<DecodingKey, JwtError> {
     if jwk.kty != "RSA" {
         return Err(JwtError::Invalid(format!("unsupported kty: {}", jwk.kty)));
@@ -49,6 +63,7 @@ pub fn decoding_key_from_jwk(jwk: &Jwk) -> Result<DecodingKey, JwtError> {
         .map_err(|e| JwtError::Invalid(format!("invalid rsa components: {e}")))
 }
 
+/// 从 JWKS 中按 kid 选择公钥（kid 为空时取第一个）。
 pub fn decoding_key_from_jwks(jwks: &Jwks, kid: Option<&str>) -> Result<DecodingKey, JwtError> {
     let jwk = match kid {
         Some(kid) => jwks

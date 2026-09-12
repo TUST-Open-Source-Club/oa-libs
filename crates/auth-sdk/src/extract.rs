@@ -8,17 +8,25 @@ use crate::claims::Claims;
 
 /// 服务实现该 trait 后即可使用 `AuthUser` / `OptionalAuthUser` 提取器。
 pub trait TokenVerifier: Send + Sync {
+    /// 校验令牌并返回 claims；无效/过期时返回 401 错误。
     fn verify_token(&self, token: &str) -> Result<Claims, AppError>;
 }
 
 /// 必须登录的请求提取器。
 #[derive(Debug, Clone)]
-pub struct AuthUser(pub Claims);
+pub struct AuthUser(
+    /// 令牌载荷。
+    pub Claims,
+);
 
 /// 可选登录的请求提取器（公开接口中识别登录态）。
 #[derive(Debug, Clone)]
-pub struct OptionalAuthUser(pub Option<Claims>);
+pub struct OptionalAuthUser(
+    /// 有登录态时为 `Some(claims)`。
+    pub Option<Claims>,
+);
 
+/// 从 Authorization 头提取 Bearer 令牌（缺失或格式错误返回 None）。
 fn bearer_token(parts: &Parts) -> Option<&str> {
     parts
         .headers
@@ -56,10 +64,12 @@ where
 }
 
 impl AuthUser {
+    /// 当前请求的令牌载荷。
     pub fn claims(&self) -> &Claims {
         &self.0
     }
 
+    /// 要求指定角色，否则 403。
     pub fn require_role(&self, role: &str) -> Result<(), AppError> {
         if self.0.has_role(role) {
             Ok(())
@@ -68,6 +78,7 @@ impl AuthUser {
         }
     }
 
+    /// 要求管理员权限（admin / superadmin），否则 403。
     pub fn require_admin(&self) -> Result<(), AppError> {
         if self.0.is_admin() {
             Ok(())
@@ -76,6 +87,7 @@ impl AuthUser {
         }
     }
 
+    /// 要求模块 scope，否则 403。
     pub fn require_scope(&self, scope: &str) -> Result<(), AppError> {
         if self.0.has_scope(scope) {
             Ok(())
@@ -84,6 +96,7 @@ impl AuthUser {
         }
     }
 
+    /// 要求资源级 scope（如 `meeting:{id}`），否则 403。
     pub fn require_resource_scope(&self, kind: &str, id: &str) -> Result<(), AppError> {
         if self.0.has_resource_scope(kind, id) {
             Ok(())

@@ -1,24 +1,32 @@
 use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation};
 
 use crate::claims::Claims;
-use crate::jwks::key_id_from_pem;
 
+/// JWT 处理错误。
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum JwtError {
+    /// 令牌已过期（超出 leeway 容差）。
     #[error("token expired")]
     Expired,
+    /// 令牌无效：签名、issuer、格式等校验失败。
     #[error("invalid token: {0}")]
     Invalid(String),
+    /// 签发失败（私钥格式错误等）。
     #[error("token encoding failed: {0}")]
     Encoding(String),
 }
 
-/// 使用 RSA 私钥 PEM 签发 Access Token（RS256）。
-pub fn encode_access_token(claims: &Claims, private_pem: &[u8]) -> Result<String, JwtError> {
+/// 使用 RSA 私钥 PEM 签发 Access Token（RS256），`kid` 应与 JWKS 中的 kid 一致
+/// （由公钥 PEM 经 [`key_id_from_pem`] 派生）。
+pub fn encode_access_token(
+    claims: &Claims,
+    private_pem: &[u8],
+    kid: &str,
+) -> Result<String, JwtError> {
     let key =
         EncodingKey::from_rsa_pem(private_pem).map_err(|e| JwtError::Encoding(e.to_string()))?;
     let mut header = Header::new(Algorithm::RS256);
-    header.kid = Some(key_id_from_pem(private_pem));
+    header.kid = Some(kid.to_string());
     jsonwebtoken::encode(&header, claims, &key).map_err(|e| JwtError::Encoding(e.to_string()))
 }
 
@@ -46,6 +54,7 @@ pub fn decode_access_token(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::jwks::key_id_from_pem;
     use jsonwebtoken::DecodingKey;
     use rsa::pkcs8::{EncodePrivateKey, LineEnding};
     use std::sync::OnceLock;
@@ -104,31 +113,39 @@ mod tests {
         DecodingKey::from_rsa_pem(&test_keys().public_pem).expect("public key")
     }
 
+    /// JWKS 中使用的 kid（由公钥派生，与 token 头部一致）。
+    fn test_kid() -> String {
+        key_id_from_pem(&test_keys().public_pem)
+    }
+
+    fn sign(claims: &Claims) -> String {
+        encode_access_token(claims, &test_keys().private_pem, &test_kid()).expect("sign")
+    }
+
     #[test]
     fn sign_and_verify_roundtrip() {
         let claims = sample_claims(3600);
-        let token = encode_access_token(&claims, &test_keys().private_pem).expect("sign");
+        let token = sign(&claims);
         let decoded = decode_access_token(&token, &decoding_key(), "https://oa.test").expect("verify");
         assert_eq!(decoded, claims);
 
         let header = jsonwebtoken::decode_header(&token).expect("header");
         assert_eq!(header.alg, Algorithm::RS256);
-        assert_eq!(header.kid, Some(key_id_from_pem(&test_keys().private_pem)));
+        assert_eq!(header.kid, Some(test_kid()));
     }
 
     #[test]
     fn rejects_expired_token() {
         // jsonwebtoken 默认 60s leeway（时钟偏移容差），过期需超过该窗口
         let claims = sample_claims(-120);
-        let token = encode_access_token(&claims, &test_keys().private_pem).expect("sign");
+        let token = sign(&claims);
         let err = decode_access_token(&token, &decoding_key(), "https://oa.test").unwrap_err();
         assert_eq!(err, JwtError::Expired);
     }
 
     #[test]
     fn rejects_wrong_issuer() {
-        let token = encode_access_token(&sample_claims(3600), &test_keys().private_pem)
-            .expect("sign");
+        let token = sign(&sample_claims(3600));
         let err =
             decode_access_token(&token, &decoding_key(), "https://evil.test").unwrap_err();
         assert!(matches!(err, JwtError::Invalid(_)));
@@ -136,8 +153,7 @@ mod tests {
 
     #[test]
     fn rejects_tampered_token() {
-        let token =
-            encode_access_token(&sample_claims(3600), &test_keys().private_pem).expect("sign");
+        let token = sign(&sample_claims(3600));
         let mut tampered = token.clone();
         tampered.push('x');
         let err = decode_access_token(&tampered, &decoding_key(), "https://oa.test").unwrap_err();
@@ -154,7 +170,7 @@ mod tests {
 
     #[test]
     fn rejects_invalid_encoding_key() {
-        let err = encode_access_token(&sample_claims(3600), b"not-a-pem").unwrap_err();
+        let err = encode_access_token(&sample_claims(3600), b"not-a-pem", "kid").unwrap_err();
         assert!(matches!(err, JwtError::Encoding(_)));
     }
 

@@ -3,31 +3,44 @@ use serde::{Deserialize, Serialize};
 /// Access Token 载荷。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Claims {
+    /// 用户 ID（游客为 `guest:{grantId}`）。
     pub sub: String,
+    /// 显示名。
     pub name: String,
+    /// 头像存储 key（可选）。
     #[serde(skip_serializing_if = "Option::is_none")]
     pub avatar: Option<String>,
+    /// 角色列表（member/admin/superadmin/...）。
     #[serde(default)]
     pub roles: Vec<String>,
+    /// 模块级 scope 与资源级 scope（meeting:{id} 等）。
     #[serde(default)]
     pub scopes: Vec<String>,
+    /// 是否游客令牌。
     #[serde(default)]
     pub guest: bool,
+    /// 签发者（issuer URL）。
     pub iss: String,
+    /// 签发时间（Unix 秒）。
     pub iat: i64,
+    /// 过期时间（Unix 秒）。
     pub exp: i64,
+    /// 令牌唯一 ID（用于审计/追踪）。
     pub jti: String,
 }
 
 impl Claims {
+    /// 是否拥有指定角色。
     pub fn has_role(&self, role: &str) -> bool {
         self.roles.iter().any(|r| r == role)
     }
 
+    /// 是否为管理员（admin 或 superadmin）。
     pub fn is_admin(&self) -> bool {
         self.has_role("admin") || self.has_role("superadmin")
     }
 
+    /// 是否拥有模块级访问 scope（如 `im`、`drive`）。
     pub fn has_scope(&self, scope: &str) -> bool {
         self.scopes.iter().any(|s| s == scope)
     }
@@ -38,10 +51,12 @@ impl Claims {
         self.scopes.iter().any(|s| s == &expected)
     }
 
+    /// 是否为游客身份（临时令牌，绑定单一资源）。
     pub fn is_guest(&self) -> bool {
         self.guest
     }
 
+    /// 是否已过期（按 Unix 秒比较，调用方可注入 clock 便于测试）。
     pub fn is_expired(&self, now: i64) -> bool {
         self.exp <= now
     }

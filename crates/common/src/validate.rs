@@ -1,9 +1,14 @@
 //! 通用校验：邮箱、密码强度、用户名。返回稳定的错误键，供前端 i18n 映射。
 
+/// 邮箱最大长度（RFC 5321）。
 pub const EMAIL_MAX_LEN: usize = 254;
+/// 密码最小长度。
 pub const PASSWORD_MIN_LEN: usize = 8;
+/// 密码最大长度（防超长输入拖慢哈希）。
 pub const PASSWORD_MAX_LEN: usize = 128;
+/// 用户名最小长度。
 pub const USERNAME_MIN_LEN: usize = 3;
+/// 用户名最大长度。
 pub const USERNAME_MAX_LEN: usize = 32;
 
 /// 简单邮箱校验：单 `@`、本地与域名均非空、域名含点且无空白字符。
@@ -28,6 +33,7 @@ pub fn is_valid_email(email: &str) -> bool {
         .all(|label| !label.is_empty() && label.chars().all(|c| c.is_ascii_alphanumeric() || c == '-'))
 }
 
+/// 归一化邮箱：去除首尾空白并转小写（存储前统一使用）。
 pub fn normalize_email(email: &str) -> String {
     email.trim().to_lowercase()
 }
