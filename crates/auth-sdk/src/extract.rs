@@ -12,9 +12,11 @@ pub trait TokenVerifier: Send + Sync {
 }
 
 /// 必须登录的请求提取器。
+#[derive(Debug, Clone)]
 pub struct AuthUser(pub Claims);
 
 /// 可选登录的请求提取器（公开接口中识别登录态）。
+#[derive(Debug, Clone)]
 pub struct OptionalAuthUser(pub Option<Claims>);
 
 fn bearer_token(parts: &Parts) -> Option<&str> {

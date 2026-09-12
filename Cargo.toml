@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/common"]
+members = ["crates/common", "crates/auth-sdk"]
 
 [workspace.package]
 version = "0.1.0"

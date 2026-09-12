@@ -77,8 +77,15 @@ mod tests {
         })
     }
 
+    fn now_ts() -> i64 {
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system time")
+            .as_secs() as i64
+    }
+
     fn sample_claims(exp_offset: i64) -> Claims {
-        let now = 1_700_000_000;
+        let now = now_ts();
         Claims {
             sub: "u1".into(),
             name: "张三".into(),
@@ -111,7 +118,8 @@ mod tests {
 
     #[test]
     fn rejects_expired_token() {
-        let claims = sample_claims(-10);
+        // jsonwebtoken 默认 60s leeway（时钟偏移容差），过期需超过该窗口
+        let claims = sample_claims(-120);
         let token = encode_access_token(&claims, &test_keys().private_pem).expect("sign");
         let err = decode_access_token(&token, &decoding_key(), "https://oa.test").unwrap_err();
         assert_eq!(err, JwtError::Expired);
