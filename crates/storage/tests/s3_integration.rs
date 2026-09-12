@@ -105,3 +105,38 @@ async fn missing_key_returns_not_found() {
         Err(StorageError::NotFound(_))
     ));
 }
+
+#[tokio::test]
+async fn presigned_put_upload_roundtrip() {
+    if endpoint().is_none() {
+        eprintln!("跳过：未设置 S3_TEST_ENDPOINT");
+        return;
+    }
+    let storage = backend();
+    let key = format!("it/put-{}.txt", uuid::Uuid::now_v7().simple());
+    let url = storage
+        .presign_put(&key, 300)
+        .await
+        .expect("presign put")
+        .expect("s3 必须返回预签名 PUT URL");
+
+    let client = reqwest::Client::new();
+    let response = client
+        .put(&url)
+        .header("content-type", "text/plain")
+        .body("direct-upload")
+        .send()
+        .await
+        .expect("presigned put");
+    assert!(
+        response.status().is_success(),
+        "status={}",
+        response.status()
+    );
+
+    assert_eq!(
+        storage.get(&key).await.expect("get"),
+        Bytes::from_static(b"direct-upload")
+    );
+    storage.delete(&key).await.expect("cleanup");
+}

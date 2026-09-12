@@ -97,6 +97,23 @@ impl StorageBackend for S3Backend {
         }
     }
 
+    async fn presign_put(
+        &self,
+        key: &str,
+        expires_seconds: u64,
+    ) -> Result<Option<String>, StorageError> {
+        let url = self
+            .store
+            .signed_url(
+                Method::PUT,
+                &Self::path(key),
+                Duration::from_secs(expires_seconds.clamp(1, 7 * 24 * 3600)),
+            )
+            .await
+            .map_err(map_error)?;
+        Ok(Some(url.to_string()))
+    }
+
     async fn presign_get(
         &self,
         key: &str,
