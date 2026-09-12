@@ -12,6 +12,8 @@
 pub mod client;
 /// 消息模型与解析。
 pub mod message;
+/// Outbox 可靠投递。
+pub mod outbox;
 
 pub use client::Bus;
 pub use message::{parse_stream_reply, stream_name, BusMessage};
