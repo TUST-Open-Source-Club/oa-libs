@@ -29,3 +29,7 @@ club-common = { git = "ssh://git@your-host/club-oa-libs.git", tag = "v0.1.0" }
 cargo test --workspace
 cargo llvm-cov --workspace --fail-under-lines 80
 ```
+
+## 许可证
+
+本项目采用 **AGPL-3.0-or-later** 许可证，详见 [LICENSE](LICENSE)。
