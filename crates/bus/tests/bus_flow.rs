@@ -48,6 +48,22 @@ async fn publish_read_and_ack_roundtrip() {
     assert!(again.is_empty());
 }
 
+/// 回归：redis 1.7 ConnectionManager 默认 500ms 响应超时，
+/// 空流上的阻塞读必须超过该时长也不能报错。
+#[tokio::test]
+async fn blocking_read_longer_than_default_response_timeout() {
+    let bus = Bus::connect(&redis_url()).await.expect("连接 Redis");
+    let stream = stream_name("doc.node.created");
+    let group = unique_group("g");
+    bus.ensure_group(&stream, &group).await.expect("建组");
+
+    let messages = bus
+        .read_group(&[&stream], &group, "c1", 10, 1200)
+        .await
+        .expect("阻塞读不应超时");
+    assert!(messages.is_empty());
+}
+
 #[tokio::test]
 async fn ensure_group_is_idempotent() {
     let bus = Bus::connect(&redis_url()).await.expect("连接 Redis");

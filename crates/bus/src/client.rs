@@ -1,6 +1,8 @@
 //! Redis Streams 客户端封装。
 
-use redis::aio::ConnectionManager;
+use std::time::Duration;
+
+use redis::aio::{ConnectionManager, ConnectionManagerConfig};
 use redis::{cmd, AsyncCommands};
 use serde_json::Value;
 
@@ -16,9 +18,15 @@ pub struct Bus {
 
 impl Bus {
     /// 连接 Redis。
+    ///
+    /// 显式关闭响应超时：redis 1.7 的 [`ConnectionManager`] 默认 500ms，
+    /// 会让 `XREADGROUP ... BLOCK` 等阻塞命令在客户端侧提前超时（服务端其实已投递）。
     pub async fn connect(redis_url: &str) -> Result<Self, AppError> {
         let client = redis::Client::open(redis_url).map_err(AppError::internal)?;
-        let connection = ConnectionManager::new(client)
+        let config = ConnectionManagerConfig::new()
+            .set_response_timeout(None)
+            .set_connection_timeout(Some(Duration::from_secs(5)));
+        let connection = ConnectionManager::new_with_config(client, config)
             .await
             .map_err(AppError::internal)?;
         Ok(Self { connection })
