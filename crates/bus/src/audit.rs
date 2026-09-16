@@ -48,7 +48,7 @@ pub async fn record(
     now: DateTime<Utc>,
 ) -> Result<Uuid, DbErr> {
     let id = Uuid::now_v7();
-    db.execute(Statement::from_sql_and_values(
+    db.execute_raw(Statement::from_sql_and_values(
         db.get_database_backend(),
         "INSERT INTO change_log (id, entity, entity_id, action, before, after, actor_id, created_at) \
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
@@ -70,7 +70,7 @@ pub async fn record(
 /// 按 ID 查询变更记录。
 pub async fn find(db: &DatabaseConnection, id: Uuid) -> Result<Option<ChangeEntry>, DbErr> {
     let rows = db
-        .query_all(Statement::from_sql_and_values(
+        .query_all_raw(Statement::from_sql_and_values(
             db.get_database_backend(),
             "SELECT id, entity, entity_id, action, before, after, actor_id, created_at \
              FROM change_log WHERE id = $1",
@@ -88,7 +88,7 @@ pub async fn list_for(
     limit: u64,
 ) -> Result<Vec<ChangeEntry>, DbErr> {
     let rows = db
-        .query_all(Statement::from_sql_and_values(
+        .query_all_raw(Statement::from_sql_and_values(
             db.get_database_backend(),
             "SELECT id, entity, entity_id, action, before, after, actor_id, created_at \
              FROM change_log WHERE entity = $1 AND entity_id = $2 \
