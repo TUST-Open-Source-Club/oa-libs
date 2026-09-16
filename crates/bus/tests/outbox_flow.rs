@@ -2,7 +2,7 @@
 
 use chrono::Utc;
 use club_bus::{outbox, Bus};
-use sea_orm::EntityTrait;
+use sea_orm::{ConnectionTrait, EntityTrait};
 use serde_json::json;
 use uuid::Uuid;
 
@@ -99,4 +99,29 @@ async fn retry_marks_row_and_schedules_backoff() {
         row.available_at > Utc::now().fixed_offset(),
         "应安排到未来重试"
     );
+}
+
+#[tokio::test]
+async fn audit_record_and_list() {
+    let db = test_db().await;
+    db.execute_unprepared(club_bus::audit::DDL).await.expect("建表");
+    let now = chrono::Utc::now();
+    let entity_id = uuid::Uuid::now_v7().to_string();
+    let id = club_bus::audit::record(
+        &db,
+        "task",
+        &entity_id,
+        "update",
+        Some(serde_json::json!({ "title": "旧标题" })),
+        Some(serde_json::json!({ "title": "新标题" })),
+        None,
+        now,
+    )
+    .await
+    .expect("写入");
+    let found = club_bus::audit::find(&db, id).await.expect("查询").expect("存在");
+    assert_eq!(found.action, "update");
+    assert_eq!(found.before.unwrap()["title"], "旧标题");
+    let list = club_bus::audit::list_for(&db, "task", &entity_id, 10).await.expect("列表");
+    assert_eq!(list.len(), 1);
 }

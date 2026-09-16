@@ -13,6 +13,7 @@ pub mod client;
 /// 消息模型与解析。
 pub mod message;
 /// Outbox 可靠投递。
+pub mod audit;
 pub mod outbox;
 
 pub use client::Bus;
