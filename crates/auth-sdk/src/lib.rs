@@ -9,6 +9,7 @@ pub mod claims;
 /// axum 请求提取器（AuthUser / OptionalAuthUser）。
 pub mod extract;
 /// JWKS 类型与解码 key 解析。
+pub mod guard;
 pub mod jwks;
 /// JWT 签发与验签。
 pub mod jwt;

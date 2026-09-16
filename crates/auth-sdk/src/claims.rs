@@ -19,6 +19,12 @@ pub struct Claims {
     /// 是否游客令牌。
     #[serde(default)]
     pub guest: bool,
+    /// 账号类型：human / bot（缺省视为 human）。
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub account_type: Option<String>,
+    /// Bot 权限矩阵（模块 → {read, write}）。
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bot_permissions: Option<serde_json::Value>,
     /// 签发者（issuer URL）。
     pub iss: String,
     /// 签发时间（Unix 秒）。
@@ -56,6 +62,23 @@ impl Claims {
         self.guest
     }
 
+    /// 是否为 Bot 账号。
+    pub fn is_bot(&self) -> bool {
+        self.account_type.as_deref() == Some("bot")
+    }
+
+    /// 是否允许访问指定模块操作（人类账号恒允许；Bot 按权限矩阵）。
+    pub fn allow_module(&self, module: &str, write: bool) -> bool {
+        if !self.is_bot() {
+            return true;
+        }
+        let Some(matrix) = self.bot_permissions.as_ref().and_then(|value| value.get(module)) else {
+            return false;
+        };
+        let key = if write { "write" } else { "read" };
+        matrix.get(key).and_then(serde_json::Value::as_bool).unwrap_or(false)
+    }
+
     /// 是否已过期（按 Unix 秒比较，调用方可注入 clock 便于测试）。
     pub fn is_expired(&self, now: i64) -> bool {
         self.exp <= now
@@ -74,6 +97,8 @@ mod tests {
             roles: vec!["member".into()],
             scopes: vec!["im".into(), "doc".into()],
             guest: false,
+            account_type: None,
+            bot_permissions: None,
             iss: "https://oa.test".into(),
             iat: 100,
             exp: 200,
@@ -105,6 +130,8 @@ mod tests {
 
         let guest = Claims {
             guest: true,
+            account_type: None,
+            bot_permissions: None,
             scopes: vec!["meeting:abc".into()],
             roles: vec![],
             ..member()
@@ -114,6 +141,25 @@ mod tests {
         assert!(!guest.has_resource_scope("meeting", "other"));
         // 普通 scope 不应被资源 scope 匹配
         assert!(!guest.has_scope("meeting"));
+    }
+
+    #[test]
+    fn bot_permissions() {
+        let mut bot = member();
+        bot.account_type = Some("bot".into());
+        bot.bot_permissions = Some(serde_json::json!({
+            "task": { "read": true, "write": false },
+            "im": { "read": true, "write": true }
+        }));
+        assert!(bot.is_bot());
+        assert!(bot.allow_module("task", false));
+        assert!(!bot.allow_module("task", true));
+        assert!(bot.allow_module("im", true));
+        assert!(!bot.allow_module("doc", false));
+
+        let human = member();
+        assert!(!human.is_bot());
+        assert!(human.allow_module("doc", true));
     }
 
     #[test]

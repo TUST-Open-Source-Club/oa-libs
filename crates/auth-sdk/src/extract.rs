@@ -123,6 +123,8 @@ mod tests {
                     roles: vec!["member".into()],
                     scopes: vec!["im".into()],
                     guest: false,
+                    account_type: None,
+                    bot_permissions: None,
                     iss: "https://oa.test".into(),
                     iat: 0,
                     exp: i64::MAX,

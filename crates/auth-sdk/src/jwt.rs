@@ -102,6 +102,8 @@ mod tests {
             roles: vec!["member".into()],
             scopes: vec!["im".into()],
             guest: false,
+            account_type: None,
+            bot_permissions: None,
             iss: "https://oa.test".into(),
             iat: now,
             exp: now + exp_offset,
